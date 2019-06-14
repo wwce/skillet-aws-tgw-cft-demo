@@ -12,7 +12,12 @@ from botocore.exceptions import ClientError
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
-Region = ''
+aws_region = ''
+
+ACCESS_KEY = ''
+SECRET_KEY = ''
+cf_client = ''
+s3_client = ''
 
 
 def generate_random_string():
@@ -28,7 +33,7 @@ def parse_template(template):
     :param template:
     :return:
     """
-    cf_client = boto3.client('cloudformation', region_name=Region)
+
     with open(template) as template_fileobj:
         template_data = template_fileobj.read()
         try:
@@ -49,7 +54,7 @@ def load_template(template_url, params, stack_name):
     :return:
     """
     try:
-        cf_client = boto3.client('cloudformation', region_name=Region)
+
         response = cf_client.create_stack(
             StackName=stack_name,
             TemplateURL=template_url,
@@ -71,12 +76,10 @@ def get_template(template_file):
             response = urlopen(template_file)
             cf_template = response.read()
         elif template_file.startswith("s3"):
-            _, path = (template_file.split("//", 1))
+            path = (template_file.split("//", 1))
             bucket_name, path = path.split("/", 1)
 
-            s3 = boto3.client("s3", region_name=Region)
-
-            response = s3.get_object(Bucket=bucket_name, Key=path)
+            response = s3_client.get_object(Bucket=bucket_name, Key=path)
             val = response['Body'].read()
             cf_template = val.decode('utf-8')
         else:
@@ -89,15 +92,15 @@ def get_template(template_file):
     return cf_template
 
 
-def upload_files(s3bucket_name, dir, Region):
+def upload_files(s3bucket_name, dir, aws_region):
     """
 
     :param s3bucket_name:
     :param dir:
-    :param Region:
+    :param aws_region:
     :return:
     """
-    client = boto3.client('s3', region_name=Region)
+
     for subdir, dirs, files in os.walk(dir):
         for file in files:
             key = subdir.replace(dir + '/', '')
@@ -119,9 +122,9 @@ def validate_cf_template(cf_template, sc):
     :param sc:
     :return:
     """
-    global aws_region
+    global aws_aws_region
     try:
-        client = boto3.client('cloudformation', region_name=Region)
+
         response = client.validate_template(TemplateURL=cf_template)
         if ('Capabilities' in response) and (sc == "no"):
             print(response['Capabilities'], "=>>", response['CapabilitiesReason'])
@@ -138,13 +141,12 @@ def validate_cf_template(cf_template, sc):
         return False
 
 
-def monitor_stack(stack_name, Region):
+def monitor_stack(stack_name, aws_region):
     """
 
     :param stack_name:
     :return:
     """
-    cf_client = boto3.client('cloudformation', region_name=Region)
 
     while True:
         try:
@@ -184,25 +186,42 @@ def monitor_stack(stack_name, Region):
 
 
 def main():
-    global Region
+    global cf_client
+    global ACCESS_KEY 
+    global SECRET_KEY 
+    global aws_region
     """
     Input arguments
-    Mandatory -r Region 'eu-west-1' | 'us-east-1' ......
+    Mandatory -r aws_region 'eu-west-1' | 'us-east-1' ......
 
     args = parser.parse_args()
 
     """
     parser = argparse.ArgumentParser(description='Get Parameters')
-    parser.add_argument('-r', '--Region', help='Select Region', default='us-east-1')
+    parser.add_argument('-r', '--aws-aws_region', help='Select aws_region', default='us-east-1')
+    parser.add_argument('-k', '--aws_access_key', help='AWS Key', required=True)
+    parser.add_argument('-s', '--aws_secret_key', help='AWS Secret', required=True)
     args = parser.parse_args()
-    Region = args.Region
+    ACCESS_KEY = args.aws_access_key
+    SECRET_KEY = args.aws_secret_key
+    aws_region = args.aws-aws_region
+
+    cf_client = boto3.client('cloudformation', 
+                        region_name=aws_region,
+                        aws_access_key_id=ACCESS_KEY,
+                        aws_secret_access_key=SECRET_KEY)
+    
+    s3_client = boto3.client("s3", 
+                        region_name=aws_region,
+                        aws_access_key_id=ACCESS_KEY,
+                        aws_secret_access_key=SECRET_KEY)
 
     template = 'template.json'
     params_file = 'parameters.json'
     params_list = []
     prefix = generate_random_string()
-    s3bucket_name = Region + '-' + prefix + '-tgw-direct'
-    template_url = 'https://' + s3bucket_name + '.s3-' + Region + '.amazonaws.com/' + template
+    s3bucket_name = aws_region + '-' + prefix + '-tgw-direct'
+    template_url = 'https://' + s3bucket_name + '.s3-' + aws_region + '.amazonaws.com/' + template
     stack_name = 'panw-' + prefix + 'tgw-direct'
     dirs = ['bootstrap']
 
@@ -220,8 +239,8 @@ def main():
             params_list.append(temp_dict)
 
     try:
-        s3 = boto3.resource('s3', region_name=Region)
-        response = s3.create_bucket(Bucket=s3bucket_name, CreateBucketConfiguration={'LocationConstraint': Region})
+        s3 = boto3.resource('s3', region_name=aws_region)
+        response = s3.create_bucket(Bucket=s3bucket_name, CreateBucketConfiguration={'LocationConstraint': aws_region})
         print('Created S3 Bucket - {}'.format(response))
 
     except Exception as e:
@@ -229,14 +248,14 @@ def main():
 
 
     for dir in dirs:
-        upload_files(s3bucket_name, dir, Region)
+        upload_files(s3bucket_name, dir, aws_region)
 
     if not validate_cf_template(template_url, 'yes'):
         sys.exit("CF Template not valid")
     else:
         load_template(template_url, params_list, stack_name)
 
-    monitor_stack(stack_name, Region)
+    monitor_stack(stack_name, aws_region)
 
 
 if __name__ == '__main__':
