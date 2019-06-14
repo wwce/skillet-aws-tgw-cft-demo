@@ -110,7 +110,7 @@ def upload_files(s3bucket_name, dir, aws_region):
                 filename_path = filename_path.replace('lambda/', '')
 
             with open(full_path, 'rb')as data:
-                response = client.put_object(
+                response = s3_client.put_object(
                     ACL='public-read', Body=data, Bucket=s3bucket_name, Key=filename_path)
             logger.info('Response {}'.format(response))
 
