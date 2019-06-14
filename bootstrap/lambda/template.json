@@ -84,12 +84,12 @@
     "BootstrapBucket": {
       "Type": "String",
       "Description": "Enter the name S3 Bucket Name containing the Bootstrap files",
-      "Default": "us-east-1-tgw-direct"
+      "Default": ""
     },
     "LambdaFunctionsBucketName": {
       "Description": "Existing S3 bucket name which contains the Lambda funtions zip file",
       "Type": "String",
-      "Default": "us-east-1-tgw-direct"
+      "Default": ""
     },
     "LambdaZipFile": {
       "Description": "Lambda code zip filename which is stored in above mentioned Required parameters LambdaFunctionsBucketName",
