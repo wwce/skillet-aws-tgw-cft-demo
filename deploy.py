@@ -206,7 +206,7 @@ def main():
     args = parser.parse_args()
     ACCESS_KEY = args.aws_access_key
     SECRET_KEY = args.aws_secret_key
-    aws_region = args.aws-aws_region
+    aws_region = args.aws_region
     KeyName = args.aws_key_pair
 
     cf_client = boto3.client('cloudformation', 
