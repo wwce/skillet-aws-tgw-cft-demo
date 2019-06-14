@@ -1,0 +1,17 @@
+{
+  "VpcSummaryRoute":"10.0.0.0/8",
+  "splitroutes":"true",
+  "KeyName":"AWS-Ireland",
+  "apikey":"LUFRPT1qS2xCRmZ6WVMrREtrK00yUGt4dVRna2lkY1U9cmgyaE93L3VoZ2U3WUgxeFpGVE1wOUNtdlM2S0Z5Z25ObG8wbmZoNXpuWT0=",
+  "VpcAzs":"eu-west-1a,eu-west-1b",
+  "NatInstanceType":"t2.micro",
+  "SSHLocation":"0.0.0.0/0",
+  "FWInstanceType":"m4.xlarge",
+  "FWLicenseType":"Bundle1",
+  "RouteFailover":"false",
+  "BootstrapBucket":"eu-west-1-jrh-tgw-direct",
+  "LambdaFunctionsBucketName":"eu-west-1-jrh-tgw-direct",
+  "LambdaZipFile":"lambda-combined.zip",
+  "LambdaRate":"rate(1 minute)"
+}
+
