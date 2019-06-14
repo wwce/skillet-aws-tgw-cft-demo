@@ -241,7 +241,7 @@ def main():
                         aws_secret_access_key=SECRET_KEY)
 
     template = 'template.json'
-    params_file = 'parameters.json'
+    params_file = './parameters.json'
     params_list = []
     prefix = generate_random_string()
     s3bucket_name = aws_region + '-' + prefix + '-tgw-direct'
@@ -262,18 +262,21 @@ def main():
     vpc_azs_str = aws_region + 'a,'+ aws_region + 'b'
 
     
+    try:
+        with open(params_file, 'r') as data:
+            #
+            # Add the required parameters to the parameters file
+            #
+            params_list.append({'ParameterKey': 'KeyName', 'ParameterValue': KeyName})
+            params_list.append({'ParameterKey': 'VpcAzs', 'ParameterValue': vpc_azs_str})
 
-    with open(params_file, 'r') as data:
-        #
-        #Add the required parameters to the parameters file
-        #
-        params_list.append({'ParameterKey': 'KeyName', 'ParameterValue': KeyName })
-        params_list.append({'ParameterKey': 'VpcAzs', 'ParameterValue': vpc_azs_str })
+            params_dict = json.load(data)
+            for k, v in params_dict.items():
+                temp_dict = {'ParameterKey': k, "ParameterValue": v}
+                params_list.append(temp_dict)
+    except Exception as e:
+        logger.info('Got exception {}'.format(e))
 
-        params_dict = json.load(data)
-        for k, v in params_dict.items():
-            temp_dict = {'ParameterKey': k, "ParameterValue": v}
-            params_list.append(temp_dict)
 
     try:
         s3 = boto3.resource('s3', region_name=aws_region)
