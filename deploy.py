@@ -280,8 +280,8 @@ def main():
 
 
     try:
-        s3 = boto3.resource('s3', region_name=aws_region)
-        response = s3.create_bucket(Bucket=s3bucket_name, CreateBucketConfiguration={'LocationConstraint': aws_region})
+        s3_client = boto3.resource('s3', region_name=aws_region)
+        response = s3_client.create_bucket(Bucket=s3bucket_name, CreateBucketConfiguration={'LocationConstraint': aws_region})
         print('Created S3 Bucket - {}'.format(response))
 
     except Exception as e:
