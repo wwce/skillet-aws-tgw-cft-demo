@@ -198,13 +198,16 @@ def main():
 
     """
     parser = argparse.ArgumentParser(description='Get Parameters')
-    parser.add_argument('-r', '--aws-aws_region', help='Select aws_region', default='us-east-1')
+    parser.add_argument('-r', '--aws_region', help='Select aws_region', default='us-east-1')
     parser.add_argument('-k', '--aws_access_key', help='AWS Key', required=True)
     parser.add_argument('-s', '--aws_secret_key', help='AWS Secret', required=True)
+    parser.add_argument('-c', '--aws_key_pair', help='AWS EC2 Key Pair', required=True)
+    
     args = parser.parse_args()
     ACCESS_KEY = args.aws_access_key
     SECRET_KEY = args.aws_secret_key
     aws_region = args.aws-aws_region
+    KeyName = args.aws_key_pair
 
     cf_client = boto3.client('cloudformation', 
                         region_name=aws_region,
@@ -231,8 +234,21 @@ def main():
     }
     with open('deployment_data.json','w+') as datafile:
         datafile.write(json.dumps(config_dict))
+    
+    # Create zones from region in this case Zone a and Zone b
+    # Required string is
+    # 'eu-west-1a,eu-west-1b'
+    vpc_azs_str = aws_region + 'a,'+ aws_region + 'b'
+
+    
 
     with open(params_file, 'r') as data:
+        #
+        #Add the required parameters to the parameters file
+        #
+        params_list.append({'ParameterKey': 'KeyName', 'ParameterValue': KeyName })
+        params_list.append({'ParameterKey': 'VpcAzs', 'ParameterValue': vpc_azs_str })
+
         params_dict = json.load(data)
         for k, v in params_dict.items():
             temp_dict = {'ParameterKey': k, "ParameterValue": v}
