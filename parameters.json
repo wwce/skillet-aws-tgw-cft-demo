@@ -9,8 +9,6 @@
   "FWInstanceType":"m4.xlarge",
   "FWLicenseType":"Bundle1",
   "RouteFailover":"false",
-  "BootstrapBucket":"eu-west-1-jrh-tgw-direct",
-  "LambdaFunctionsBucketName":"eu-west-1-jrh-tgw-direct",
   "LambdaZipFile":"lambda-combined.zip",
   "LambdaRate":"rate(1 minute)"
 }

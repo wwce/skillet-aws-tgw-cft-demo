@@ -241,7 +241,6 @@ def main():
                         aws_secret_access_key=SECRET_KEY)
 
     template = 'template.json'
-    print(os.listdir())
     params_file = './parameters.json'
     params_list = []
     prefix = generate_random_string()
@@ -268,8 +267,11 @@ def main():
             #
             # Add the required parameters to the parameters file
             #
+            params_list = []
             params_list.append({'ParameterKey': 'KeyName', 'ParameterValue': KeyName})
             params_list.append({'ParameterKey': 'VpcAzs', 'ParameterValue': vpc_azs_str})
+            params_list.append({'ParameterKey': 'BootstrapBucket', 'ParameterValue': s3bucket_name})
+            params_list.append({'ParameterKey': 'LambdaFunctionsBucketName', 'ParameterValue': s3bucket_name})
 
             params_dict = json.load(data)
             for k, v in params_dict.items():
@@ -280,7 +282,8 @@ def main():
 
 
     try:
-        response = s3_client.create_bucket(Bucket=s3bucket_name, CreateBucketConfiguration={'LocationConstraint': aws_region})
+        s3 = boto3.resource('s3', region_name=aws_region)
+        response = s3.create_bucket(Bucket=s3bucket_name, CreateBucketConfiguration={'LocationConstraint': aws_region})
         print('Created S3 Bucket - {}'.format(response))
 
     except Exception as e:
@@ -288,7 +291,6 @@ def main():
 
 
     for dir in dirs:
-        print('Uploadling dir'.format(dir))
         upload_files(s3bucket_name, dir, aws_region)
 
     if not validate_cf_template(template_url, 'yes'):
