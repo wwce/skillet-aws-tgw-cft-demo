@@ -282,8 +282,8 @@ def main():
 
 
     try:
-        s3 = boto3.resource('s3', region_name=aws_region)
-        response = s3.create_bucket(Bucket=s3bucket_name, CreateBucketConfiguration={'LocationConstraint': aws_region})
+        s3_client = boto3.resource('s3', region_name=aws_region)
+        response = s3_client.create_bucket(Bucket=s3bucket_name, CreateBucketConfiguration={'LocationConstraint': aws_region})
         print('Created S3 Bucket - {}'.format(response))
 
     except Exception as e:
@@ -296,6 +296,7 @@ def main():
     if not validate_cf_template(template_url, 'yes'):
         sys.exit("CF Template not valid")
     else:
+        print('Deploying template with parameters {}'.format(params_list))
         load_template(template_url, params_list, stack_name)
 
     monitor_stack(stack_name, aws_region)
