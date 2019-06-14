@@ -241,7 +241,7 @@ def main():
                         aws_secret_access_key=SECRET_KEY)
 
     template = 'template.json'
-    print(os.dir())
+    print(os.listdir())
     params_file = './parameters.json'
     params_list = []
     prefix = generate_random_string()
