@@ -16,9 +16,6 @@ aws_region = ''
 
 ACCESS_KEY = ''
 SECRET_KEY = ''
-cf_client = ''
-s3_client = ''
-
 
 def generate_random_string():
     string_length = 8
@@ -33,6 +30,10 @@ def parse_template(template):
     :param template:
     :return:
     """
+    cf_client = boto3.client('cloudformation', 
+                        region_name=aws_region,
+                        aws_access_key_id=ACCESS_KEY,
+                        aws_secret_access_key=SECRET_KEY)
 
     with open(template) as template_fileobj:
         template_data = template_fileobj.read()
@@ -53,6 +54,10 @@ def load_template(template_url, params, stack_name):
     :param stack_name:
     :return:
     """
+    cf_client = boto3.client('cloudformation', 
+                        region_name=aws_region,
+                        aws_access_key_id=ACCESS_KEY,
+                        aws_secret_access_key=SECRET_KEY)
     try:
 
         response = cf_client.create_stack(
@@ -71,6 +76,10 @@ def get_template(template_file):
     '''
         Read a template file and return the contents
     '''
+    s3_client = boto3.client("s3", 
+                        region_name=aws_region,
+                        aws_access_key_id=ACCESS_KEY,
+                        aws_secret_access_key=SECRET_KEY)
     try:
         if template_file.startswith("http"):
             response = urlopen(template_file)
@@ -100,6 +109,10 @@ def upload_files(s3bucket_name, dir, aws_region):
     :param aws_region:
     :return:
     """
+    s3_client = boto3.client("s3", 
+                        region_name=aws_region,
+                        aws_access_key_id=ACCESS_KEY,
+                        aws_secret_access_key=SECRET_KEY)
 
     for subdir, dirs, files in os.walk(dir):
         for file in files:
@@ -122,10 +135,15 @@ def validate_cf_template(cf_template, sc):
     :param sc:
     :return:
     """
+    cf_client = boto3.client('cloudformation', 
+                        region_name=aws_region,
+                        aws_access_key_id=ACCESS_KEY,
+                        aws_secret_access_key=SECRET_KEY)
+
     global aws_aws_region
     try:
 
-        response = client.validate_template(TemplateURL=cf_template)
+        response = cf_client.validate_template(TemplateURL=cf_template)
         if ('Capabilities' in response) and (sc == "no"):
             print(response['Capabilities'], "=>>", response['CapabilitiesReason'])
             return False
@@ -147,6 +165,10 @@ def monitor_stack(stack_name, aws_region):
     :param stack_name:
     :return:
     """
+    cf_client = boto3.client('cloudformation', 
+                        region_name=aws_region,
+                        aws_access_key_id=ACCESS_KEY,
+                        aws_secret_access_key=SECRET_KEY)
 
     while True:
         try:
@@ -186,7 +208,6 @@ def monitor_stack(stack_name, aws_region):
 
 
 def main():
-    global cf_client
     global ACCESS_KEY 
     global SECRET_KEY 
     global aws_region
