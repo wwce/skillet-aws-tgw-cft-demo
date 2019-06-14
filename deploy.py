@@ -289,6 +289,7 @@ def main():
 
 
     for dir in dirs:
+        print('Uploadling dir'.format(dir))
         upload_files(s3bucket_name, dir, aws_region)
 
     if not validate_cf_template(template_url, 'yes'):
