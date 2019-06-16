@@ -377,7 +377,7 @@
       "Type": "AWS::Lambda::Function",
       "Properties": {
         "Description": "Sets the Untrust NIC IP object and sets trust interface static route NH",
-        "Handler": "DeleteLambdaEni.lambda_handler",
+        "Handler": "DeleteLambdaEni.handler",
         "Role": {
           "Fn::GetAtt": [
             "LambdaExecutionRole",
@@ -440,7 +440,9 @@
         "Runtime": "python3.6",
         "Timeout": 150
       },
-      "DependsOn": []
+      "DependsOn": [
+
+      ]
     },
     "DeleteLambdaENIResource": {
       "Type": "AWS::CloudFormation::CustomResource",
@@ -3218,7 +3220,8 @@
       },
       "DependsOn": [
         "FW1Instance",
-        "FW2Instance"
+        "FW2Instance",
+        "DeleteLambdaENI"
       ]
     },
     "SetTransitGatewayIdRoute": {
@@ -3400,7 +3403,8 @@
         "FW2Instance",
         "fromTGWRouteTable",
         "FW1TrustNetworkInterface",
-        "FW2TrustNetworkInterface"
+        "FW2TrustNetworkInterface",
+        "DeleteLambdaENI"
       ]
     },
     "LambdaExecutionRole": {
