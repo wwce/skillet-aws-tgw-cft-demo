@@ -14,14 +14,18 @@ logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 Region = ''
 
-def delete_stack(stack_name, Region):
+def delete_stack(stack_name, Region,ACCESS_KEY,SECRET_KEY):
     """
 
     :param stack_name:
     :param Region:
     :return:
     """
-    cf_client = boto3.client('cloudformation', region_name=Region)
+    cf_client = boto3.client('cloudformation', 
+                        aws_region=Region,
+                        aws_access_key_id=ACCESS_KEY,
+                        aws_secret_access_key=SECRET_KEY)
+
     response = cf_client.delete_stack(StackName=stack_name)
     if 'ResponseMetadata' in response and response['ResponseMetadata']['HTTPStatusCode'] < 300:
         logger.info("Got response: {0}".format(response))
@@ -30,8 +34,12 @@ def delete_stack(stack_name, Region):
         logger.info("There was an Unexpected error. response: {0}".format(response))
         return False
 
-def delete_bucket(s3bucket_name, Region):
-    s3 = boto3.resource('s3', region_name = Region)
+def delete_bucket(s3bucket_name, Region,ACCESS_KEY,SECRET_KEY):
+    s3 = boto3.resource('s3', 
+                        region_name = Region,
+                        aws_access_key_id=ACCESS_KEY,
+                        aws_secret_access_key=SECRET_KEY)
+
     bucket = s3.Bucket(s3bucket_name)
     response = bucket.objects.all().delete()
     bucket.delete()
@@ -46,15 +54,21 @@ def main():
 
     :return:
     """
+
     global Region
     """
     Input arguments
     Mandatory -r Region 'eu-west-1' | 'us-east-1' ......
     """
     parser = argparse.ArgumentParser(description='Get Parameters')
-    parser.add_argument('-r', '--Region', help='Select Region', default='us-east-1')
+    parser.add_argument('-k', '--aws_access_key', help='AWS Key', required=True)
+    parser.add_argument('-s', '--aws_secret_key', help='AWS Secret', required=True)
+    parser.add_argument('-r', '--aws_region', help='Select aws_region', default='us-east-1')
     args = parser.parse_args()
-    Region = args.Region
+    
+    ACCESS_KEY = args.aws_access_key
+    SECRET_KEY = args.aws_secret_key
+    aws_region = args.aws_region
 
     try:
         with open('deployment_data.json', 'r') as data:
@@ -65,20 +79,15 @@ def main():
         logger.infor('Got exception {}'.format(e))
         sys.exit("Could not find deployment config file 'deployment_data.json'")
 
-    # if delete_stack(stack_name, Region):
+    if delete_stack(stack_name, aws_region,ACCESS_KEY,SECRET_KEY):
         print ('Deleted Stack {}'.format(stack_name))
+    else:
+       logger.info('Failed to delete stack') 
 
-    if delete_bucket(s3bucket_name, Region):
+    if delete_bucket(s3bucket_name, aws_region,ACCESS_KEY,SECRET_KEY):
         print ('Deleted S3 Bucket {}'.format(s3bucket_name))
-
-
-
-
-
-
-
-
-
+    else:
+       logger.info('Failed to delete bucket') 
 
 
 
