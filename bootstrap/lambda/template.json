@@ -380,7 +380,7 @@
         "Handler": "DeleteLambdaEni.handler",
         "Role": {
           "Fn::GetAtt": [
-            "LambdaExecutionRole",
+            "LambdaENIRole",
             "Arn"
           ]
         },
@@ -3103,6 +3103,7 @@
         "Path": "/"
       }
     },
+
     "StateMachineExecutionPolicy": {
       "Type": "AWS::IAM::Policy",
       "Properties": {
@@ -3134,6 +3135,81 @@
             }
           ]
         }
+      }
+    },
+    "LambdaENIPolicy": {
+      "Type": "AWS::IAM::Policy",
+      "Properties": {
+        "PolicyName": {
+          "Fn::Join": [
+            "-",
+            [
+              "LambdaENIPolicy",
+              {
+                "Ref": "AWS::StackName"
+              }
+            ]
+          ]
+        },
+        "Roles": [
+          {
+            "Ref": "LambdaENIRole"
+          }
+        ],
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Action": [
+                "ec2:DetachNetworkInterface",
+                "ec2:DeleteNetworkInterface",
+                "ec2:DeleteNetworkAclEntry"
+              ],
+              "Resource": "*"
+            }
+          ]
+        }
+      }
+    },
+    "LambdaENIRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "RoleName": {
+          "Fn::Join": [
+            "-",
+            [
+              "LambdaENIRole",
+              {
+                "Ref": "AWS::StackName"
+              }
+            ]
+          ]
+        },
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": {
+                  "Fn::Join": [
+                    ".",
+                    [
+                      "states",
+                      {
+                        "Ref": "AWS::Region"
+                      },
+                      "amazonaws.com"
+                    ]
+                  ]
+                }
+              },
+              "Action": "sts:AssumeRole"
+            }
+          ]
+        },
+        "Path": "/"
       }
     },
     "InitialiseFwLambda": {
