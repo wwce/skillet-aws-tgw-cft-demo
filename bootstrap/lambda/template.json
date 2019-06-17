@@ -440,8 +440,7 @@
         "Runtime": "python3.6",
         "Timeout": 150
       },
-      "DependsOn": [
-
+      "DependsOn": ["LambdaENIPolicy"
       ]
     },
     "DeleteLambdaENIResource": {
@@ -3193,6 +3192,7 @@
         }
       }
     },
+    
     "LambdaENIRole": {
       "Type": "AWS::IAM::Role",
       "Properties": {
@@ -3200,7 +3200,7 @@
           "Fn::Join": [
             "-",
             [
-              "LambdaENIRole",
+              "ENILambdaExecutionRole",
               {
                 "Ref": "AWS::StackName"
               }
@@ -3213,25 +3213,21 @@
             {
               "Effect": "Allow",
               "Principal": {
-                "Service": {
-                  "Fn::Join": [
-                    ".",
-                    [
-                      "states",
-                      {
-                        "Ref": "AWS::Region"
-                      },
-                      "amazonaws.com"
-                    ]
-                  ]
-                }
+                "Service": [
+                  "lambda.amazonaws.com"
+                ]
               },
-              "Action": "sts:AssumeRole"
+              "Action": [
+                "sts:AssumeRole"
+              ]
             }
           ]
         },
         "Path": "/"
-      }
+      },
+      "DependsOn": [
+        "LambdaENIPolicy"
+      ]
     },
     "InitialiseFwLambda": {
       "Type": "AWS::Lambda::Function",
