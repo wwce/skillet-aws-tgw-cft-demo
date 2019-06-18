@@ -373,6 +373,97 @@
     }
   },
   "Resources": {
+    "LambdaENIPolicy": {
+      "Type": "AWS::IAM::Policy",
+      "Properties": {
+        "PolicyName": {
+          "Fn::Join": [
+            "-",
+            [
+              "LambdaENIPolicy",
+              {
+                "Ref": "AWS::StackName"
+              }
+            ]
+          ]
+        },
+        "Roles": [
+          {
+            "Ref": "LambdaENIRole"
+          }
+        ],
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Action": [
+                  "ec2:DeleteSubnet",
+                  "ec2:DescribeAddresses",
+                  "ec2:DescribeInstances",
+                  "ec2:DetachNetworkInterface",
+                  "ec2:DescribeInstanceAttribute",
+                  "ec2:DeleteNetworkInterface",
+                  "ec2:DescribeTransitGateways",
+                  "ec2:DescribeInstanceCreditSpecifications",
+                  "ec2:DescribeSecurityGroups",
+                  "ec2:DescribeImages",
+                  "ec2:DescribeTransitGatewayAttachments",
+                  "ec2:SearchTransitGatewayRoutes",
+                  "ec2:DescribeNetworkInterfaces",
+                  "ec2:DescribeTransitGatewayRouteTables",
+                  "ec2:DescribeNetworkInterfaceAttribute",
+                  "ec2:DescribeVpcs",
+                  "ec2:GetTransitGatewayRouteTablePropagations",
+                  "ec2:DescribeNetworkInterfacePermissions",
+                  "ec2:DescribeSubnets",
+                  "ec2:DescribeNetworkAcls",
+                  "ec2:DescribeRouteTables",
+                  "ec2:DescribeVpnGateways",
+                  "ec2:GetTransitGatewayRouteTableAssociations",
+                  "ec2:DescribeInstanceStatus"
+              ],
+              "Resource": "*"
+            }
+          ]
+        }
+      }
+    },
+    "LambdaENIRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "RoleName": {
+          "Fn::Join": [
+            "-",
+            [
+              "ENILambdaExecutionRole",
+              {
+                "Ref": "AWS::StackName"
+              }
+            ]
+          ]
+        },
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": [
+                  "lambda.amazonaws.com"
+                ]
+              },
+              "Action": [
+                "sts:AssumeRole"
+              ]
+            }
+          ]
+        },
+        "Path": "/"
+      },
+      "DependsOn": [
+      ]
+    },
     "DeleteLambdaENI": {
       "Type": "AWS::Lambda::Function",
       "Properties": {
@@ -440,7 +531,7 @@
         "Runtime": "python3.6",
         "Timeout": 150
       },
-      "DependsOn": ["LambdaENIPolicy"
+      "DependsOn": [
       ]
     },
     "DeleteLambdaENIResource": {
@@ -3136,99 +3227,7 @@
         }
       }
     },
-    "LambdaENIPolicy": {
-      "Type": "AWS::IAM::Policy",
-      "Properties": {
-        "PolicyName": {
-          "Fn::Join": [
-            "-",
-            [
-              "LambdaENIPolicy",
-              {
-                "Ref": "AWS::StackName"
-              }
-            ]
-          ]
-        },
-        "Roles": [
-          {
-            "Ref": "LambdaENIRole"
-          }
-        ],
-        "PolicyDocument": {
-          "Version": "2012-10-17",
-          "Statement": [
-            {
-              "Effect": "Allow",
-              "Action": [
-                  "ec2:DeleteSubnet",
-                  "ec2:DescribeAddresses",
-                  "ec2:DescribeInstances",
-                  "ec2:DetachNetworkInterface",
-                  "ec2:DescribeInstanceAttribute",
-                  "ec2:DeleteNetworkInterface",
-                  "ec2:DescribeTransitGateways",
-                  "ec2:DescribeInstanceCreditSpecifications",
-                  "ec2:DescribeSecurityGroups",
-                  "ec2:DescribeImages",
-                  "ec2:DescribeTransitGatewayAttachments",
-                  "ec2:SearchTransitGatewayRoutes",
-                  "ec2:DescribeNetworkInterfaces",
-                  "ec2:DescribeTransitGatewayRouteTables",
-                  "ec2:DescribeNetworkInterfaceAttribute",
-                  "ec2:DescribeVpcs",
-                  "ec2:GetTransitGatewayRouteTablePropagations",
-                  "ec2:DescribeNetworkInterfacePermissions",
-                  "ec2:DescribeSubnets",
-                  "ec2:DescribeNetworkAcls",
-                  "ec2:DescribeRouteTables",
-                  "ec2:DescribeVpnGateways",
-                  "ec2:GetTransitGatewayRouteTableAssociations",
-                  "ec2:DescribeInstanceStatus"
-              ],
-              "Resource": "*"
-            }
-          ]
-        }
-      }
-    },
-    
-    "LambdaENIRole": {
-      "Type": "AWS::IAM::Role",
-      "Properties": {
-        "RoleName": {
-          "Fn::Join": [
-            "-",
-            [
-              "ENILambdaExecutionRole",
-              {
-                "Ref": "AWS::StackName"
-              }
-            ]
-          ]
-        },
-        "AssumeRolePolicyDocument": {
-          "Version": "2012-10-17",
-          "Statement": [
-            {
-              "Effect": "Allow",
-              "Principal": {
-                "Service": [
-                  "lambda.amazonaws.com"
-                ]
-              },
-              "Action": [
-                "sts:AssumeRole"
-              ]
-            }
-          ]
-        },
-        "Path": "/"
-      },
-      "DependsOn": [
-        "LambdaENIPolicy"
-      ]
-    },
+
     "InitialiseFwLambda": {
       "Type": "AWS::Lambda::Function",
       "Properties": {
@@ -3313,8 +3312,7 @@
       },
       "DependsOn": [
         "FW1Instance",
-        "FW2Instance",
-        "DeleteLambdaENI"
+        "FW2Instance"
       ]
     },
     "SetTransitGatewayIdRoute": {
@@ -3496,8 +3494,7 @@
         "FW2Instance",
         "fromTGWRouteTable",
         "FW1TrustNetworkInterface",
-        "FW2TrustNetworkInterface",
-        "DeleteLambdaENI"
+        "FW2TrustNetworkInterface"
       ]
     },
     "LambdaExecutionRole": {
