@@ -531,7 +531,7 @@
         "Runtime": "python3.6",
         "Timeout": 150
       },
-      "DependsOn": [
+      "DependsOn": ["LambdaENIRole","LambdaENIPolicy"
       ]
     },
     "DeleteLambdaENIResource": {
