@@ -424,7 +424,19 @@
                   "ec2:DescribeInstanceStatus"
               ],
               "Resource": "*"
-            }
+            },
+            {
+              "Sid": "Logs",
+              "Effect": "Allow",
+              "Action": [
+                  "logs:CreateLogGroup",
+                  "logs:CreateLogStream",
+                  "logs:PutLogEvents"
+              ],
+              "Resource": [
+                  "*"
+              ]
+          }
           ]
         }
       }
@@ -531,7 +543,7 @@
         "Runtime": "python3.6",
         "Timeout": 150
       },
-      "DependsOn": [
+      "DependsOn": ["LambdaENIRole","LambdaENIPolicy"
       ]
     },
     "DeleteLambdaENIResource": {
