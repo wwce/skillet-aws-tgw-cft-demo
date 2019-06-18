@@ -140,7 +140,7 @@ def validate_cf_template(cf_template, sc):
                         aws_access_key_id=ACCESS_KEY,
                         aws_secret_access_key=SECRET_KEY)
 
-    global aws_aws_region
+   
     try:
 
         response = cf_client.validate_template(TemplateURL=cf_template)
@@ -283,7 +283,7 @@ def main():
 
     try:
         response = s3_client.create_bucket(Bucket=s3bucket_name, CreateBucketConfiguration={'LocationConstraint': aws_region})
-        print('Created S3 Bucket {}')
+        print('Created S3 Bucket {}'.format(s3bucket_name))
     except Exception as e:
         logger.info('Got exception {}'.format(e))
 
@@ -294,7 +294,7 @@ def main():
     if not validate_cf_template(template_url, 'yes'):
         sys.exit("CF Template not valid")
     else:
-        print('Deploying template with parameters {}'.format(params_list))
+        print('Deploying template')
         load_template(template_url, params_list, stack_name)
 
     monitor_stack(stack_name, aws_region)
