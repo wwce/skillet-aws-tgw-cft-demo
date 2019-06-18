@@ -14,7 +14,7 @@ logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 Region = ''
 
-def delete_stack(stack_name, Region,ACCESS_KEY,SECRET_KEY):
+def delete_stack(stack_name, Region, ACCESS_KEY, SECRET_KEY):
     """
 
     :param stack_name:
@@ -22,7 +22,7 @@ def delete_stack(stack_name, Region,ACCESS_KEY,SECRET_KEY):
     :return:
     """
     cf_client = boto3.client('cloudformation', 
-                        aws_region=Region,
+                        region_name = Region,
                         aws_access_key_id=ACCESS_KEY,
                         aws_secret_access_key=SECRET_KEY)
 
@@ -34,7 +34,7 @@ def delete_stack(stack_name, Region,ACCESS_KEY,SECRET_KEY):
         logger.info("There was an Unexpected error. response: {0}".format(response))
         return False
 
-def delete_bucket(s3bucket_name, Region,ACCESS_KEY,SECRET_KEY):
+def delete_bucket(s3bucket_name, Region, ACCESS_KEY, SECRET_KEY):
     s3 = boto3.resource('s3', 
                         region_name = Region,
                         aws_access_key_id=ACCESS_KEY,
@@ -79,12 +79,12 @@ def main():
         logger.infor('Got exception {}'.format(e))
         sys.exit("Could not find deployment config file 'deployment_data.json'")
 
-    if delete_stack(stack_name, aws_region,ACCESS_KEY,SECRET_KEY):
+    if delete_stack(stack_name, aws_region, ACCESS_KEY, SECRET_KEY):
         print ('Deleted Stack {}'.format(stack_name))
     else:
        logger.info('Failed to delete stack') 
 
-    if delete_bucket(s3bucket_name, aws_region,ACCESS_KEY,SECRET_KEY):
+    if delete_bucket(s3bucket_name, aws_region, ACCESS_KEY, SECRET_KEY):
         print ('Deleted S3 Bucket {}'.format(s3bucket_name))
     else:
        logger.info('Failed to delete bucket') 
