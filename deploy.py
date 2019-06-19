@@ -17,7 +17,20 @@ aws_region = ''
 ACCESS_KEY = ''
 SECRET_KEY = ''
 
+#
+# Initial constants
+#
+DEPLOYMENTDATA = 'deployment_data.json'
+PARAMSFILE = './parameters.json'
+TEMPLATEFILE = 'template.json'
+
+
 def generate_random_string():
+    """
+
+    Generates a random string that is used to generate a uniques name for the S3 bucket and template stack
+    :return: 8 character string
+    """
     string_length = 8
     random_string = uuid.uuid4().hex  # get a random string in a UUID fromat
     random_string = random_string.lower()[0:string_length]  # convert it in a uppercase letter and trim to your size.
@@ -27,13 +40,14 @@ def generate_random_string():
 def parse_template(template):
     """
 
+    Takes a Cloud Formation Template in json format and validates the template prior to deployment
     :param template:
-    :return:
+    :return: A valid CFT
     """
-    cf_client = boto3.client('cloudformation', 
-                        region_name=aws_region,
-                        aws_access_key_id=ACCESS_KEY,
-                        aws_secret_access_key=SECRET_KEY)
+    cf_client = boto3.client('cloudformation',
+                             region_name=aws_region,
+                             aws_access_key_id=ACCESS_KEY,
+                             aws_secret_access_key=SECRET_KEY)
 
     with open(template) as template_fileobj:
         template_data = template_fileobj.read()
@@ -49,15 +63,18 @@ def parse_template(template):
 def load_template(template_url, params, stack_name):
     """
 
-    :param template_url:
-    :param params:
-    :param stack_name:
+    Creates a stack from a template.  We need to load the template from S3 as the boto3 client has a limit on the size
+    of the template that can be uploaded from the local machine.
+
+    :param template_url: (format s3:xxxxxx
+    :param params: Json dictionary of template parameters
+    :param stack_name: Unique stack name
     :return:
     """
-    cf_client = boto3.client('cloudformation', 
-                        region_name=aws_region,
-                        aws_access_key_id=ACCESS_KEY,
-                        aws_secret_access_key=SECRET_KEY)
+    cf_client = boto3.client('cloudformation',
+                             region_name=aws_region,
+                             aws_access_key_id=ACCESS_KEY,
+                             aws_secret_access_key=SECRET_KEY)
     try:
 
         response = cf_client.create_stack(
@@ -73,13 +90,17 @@ def load_template(template_url, params, stack_name):
 
 
 def get_template(template_file):
-    '''
-        Read a template file and return the contents
-    '''
-    s3_client = boto3.client("s3", 
-                        region_name=aws_region,
-                        aws_access_key_id=ACCESS_KEY,
-                        aws_secret_access_key=SECRET_KEY)
+    """
+
+    Read a template file in json format and return the contents
+    :param: string template_file:
+    :return: valid template file
+    """
+
+    s3_client = boto3.client("s3",
+                             region_name=aws_region,
+                             aws_access_key_id=ACCESS_KEY,
+                             aws_secret_access_key=SECRET_KEY)
     try:
         if template_file.startswith("http"):
             response = urlopen(template_file)
@@ -101,22 +122,27 @@ def get_template(template_file):
     return cf_template
 
 
-def upload_files(s3bucket_name, dir, aws_region):
+def upload_files(s3bucket_name, working_dir, aws_region):
     """
 
+    Uploads template file, parameters file and bootstrap files to an S3 bucket
+    local file structure is replicated for config, content, license, software
+    by placing a 0 bytes file in each folder.  S3 does not implement a true folder structure so a zero bytes file is
+    required to create the folder structure.
+    file in the 'lambda folder are placed into the root of the bucket
     :param s3bucket_name:
-    :param dir:
+    :param working_dir:
     :param aws_region:
     :return:
     """
-    s3_client = boto3.client("s3", 
-                        region_name=aws_region,
-                        aws_access_key_id=ACCESS_KEY,
-                        aws_secret_access_key=SECRET_KEY)
+    s3_client = boto3.client("s3",
+                             region_name=aws_region,
+                             aws_access_key_id=ACCESS_KEY,
+                             aws_secret_access_key=SECRET_KEY)
 
-    for subdir, dirs, files in os.walk(dir):
+    for subdir, dirs, files in os.walk(working_dir):
         for file in files:
-            key = subdir.replace(dir + '/', '')
+            key = subdir.replace(working_dir + '/', '')
             full_path = os.path.join(subdir, file)
             filename_path = os.path.join(key, file)
             if 'lambda' in filename_path:
@@ -131,16 +157,16 @@ def upload_files(s3bucket_name, dir, aws_region):
 def validate_cf_template(cf_template, sc):
     """
 
+    Takes a Cloud Formation Template in json format and validates the template prior to deployment
     :param cf_template:
     :param sc:
-    :return:
+    :return: True / False
     """
-    cf_client = boto3.client('cloudformation', 
-                        region_name=aws_region,
-                        aws_access_key_id=ACCESS_KEY,
-                        aws_secret_access_key=SECRET_KEY)
+    cf_client = boto3.client('cloudformation',
+                             region_name=aws_region,
+                             aws_access_key_id=ACCESS_KEY,
+                             aws_secret_access_key=SECRET_KEY)
 
-   
     try:
 
         response = cf_client.validate_template(TemplateURL=cf_template)
@@ -151,24 +177,23 @@ def validate_cf_template(cf_template, sc):
             return True
     except ClientError as e:
         print(e)
-        print(sys.exc_info()[1])
         return False
     except Exception as error:
         print(error)
-        print(sys.exc_info()[1])
         return False
 
 
 def monitor_stack(stack_name, aws_region):
     """
 
+    Monitors the status of the deployment by running describe_stacks every 30 secs to report progress to the user
     :param stack_name:
     :return:
     """
-    cf_client = boto3.client('cloudformation', 
-                        region_name=aws_region,
-                        aws_access_key_id=ACCESS_KEY,
-                        aws_secret_access_key=SECRET_KEY)
+    cf_client = boto3.client('cloudformation',
+                             region_name=aws_region,
+                             aws_access_key_id=ACCESS_KEY,
+                             aws_secret_access_key=SECRET_KEY)
 
     while True:
         try:
@@ -188,12 +213,6 @@ def monitor_stack(stack_name, aws_region):
             elif stack_data['Stacks'][0]['StackStatus'] == 'CREATE_COMPLETE':
                 print('Stack has deployed successfully')
                 break
-            elif stack_data['Stacks'][0]['StackStatus'] == 'DELETE_COMPLETE':
-                print('Stack has been deleted')
-                break
-            elif stack_data['Stacks'][0]['StackStatus'] == 'DELETE_FAILED':
-                print('Stack has failed to delete check your console')
-                break
             elif stack_data['Stacks'][0]['StackStatus'] == 'ROLLBACK_FAILED':
                 print('Stack has failed to rollback check your console')
                 break
@@ -208,62 +227,73 @@ def monitor_stack(stack_name, aws_region):
 
 
 def main():
-    global ACCESS_KEY 
-    global SECRET_KEY 
-    global aws_region
     """
+
     Input arguments
-    Mandatory -r aws_region 'eu-west-1' | 'us-east-1' ......
+    Mandatory --aws_region --aws_access_key --aws_secret_key --aws_key_pair
 
-    args = parser.parse_args()
+    Stores the name of the stack and S3 bucket in file defined by DEPLOYMENTDATA
+    Bucket is defind by aws_region + '-' + 'Random string' + '-tgw-direct'
+    Default parameters are stored in PARAMSFILE are read and used to generate a parameters dictionary
 
+    :return:
     """
+    global ACCESS_KEY
+    global SECRET_KEY
+    global aws_region
+
     parser = argparse.ArgumentParser(description='Get Parameters')
     parser.add_argument('-r', '--aws_region', help='Select aws_region', default='us-east-1')
     parser.add_argument('-k', '--aws_access_key', help='AWS Key', required=True)
     parser.add_argument('-s', '--aws_secret_key', help='AWS Secret', required=True)
     parser.add_argument('-c', '--aws_key_pair', help='AWS EC2 Key Pair', required=True)
-    
+
     args = parser.parse_args()
     ACCESS_KEY = args.aws_access_key
     SECRET_KEY = args.aws_secret_key
     aws_region = args.aws_region
     KeyName = args.aws_key_pair
 
-    cf_client = boto3.client('cloudformation', 
-                        region_name=aws_region,
-                        aws_access_key_id=ACCESS_KEY,
-                        aws_secret_access_key=SECRET_KEY)
-    
-    s3_client = boto3.client("s3", 
-                        region_name=aws_region,
-                        aws_access_key_id=ACCESS_KEY,
-                        aws_secret_access_key=SECRET_KEY)
+    cf_client = boto3.client('cloudformation',
+                             region_name=aws_region,
+                             aws_access_key_id=ACCESS_KEY,
+                             aws_secret_access_key=SECRET_KEY)
 
-    template = 'template.json'
-    params_file = './parameters.json'
+    s3_client = boto3.client("s3",
+                             region_name=aws_region,
+                             aws_access_key_id=ACCESS_KEY,
+                             aws_secret_access_key=SECRET_KEY)
+
     params_list = []
     prefix = generate_random_string()
     s3bucket_name = aws_region + '-' + prefix + '-tgw-direct'
-    template_url = 'https://' + s3bucket_name + '.s3-' + aws_region + '.amazonaws.com/' + template
+    template_url = 'https://' + s3bucket_name + '.s3-' + aws_region + '.amazonaws.com/' + TEMPLATEFILE
     stack_name = 'panw-' + prefix + 'tgw-direct'
     dirs = ['bootstrap']
 
     config_dict = {
-        's3bucket_name' : s3bucket_name,
-        'stack_name' : stack_name
+        's3bucket_name': s3bucket_name,
+        'stack_name': stack_name
     }
-    with open('deployment_data.json','w+') as datafile:
+    #
+    #
+    with open(DEPLOYMENTDATA, 'w+') as datafile:
         datafile.write(json.dumps(config_dict))
-    
+
     # Create zones from region in this case Zone a and Zone b
     # Required string is
     # 'eu-west-1a,eu-west-1b'
-    vpc_azs_str = aws_region + 'a,'+ aws_region + 'b'
+    # The string is passed as a parameter and is results in "Type": "List<AWS::EC2::AvailabilityZone::Name>"
 
-    
+    vpc_azs_str = aws_region + 'a,' + aws_region + 'b'
+
+    #The format of the dictionary file is a list with structure
+    #    [
+    #        {'ParameterKey': k, "ParameterValue": v},
+    #        {'ParameterKey': k, "ParameterValue": v}
+    #    ]
     try:
-        with open(params_file, 'r') as data:
+        with open(PARAMSFILE, 'r') as data:
             #
             # Add the required parameters to the parameters file
             #
@@ -278,15 +308,14 @@ def main():
                 temp_dict = {'ParameterKey': k, "ParameterValue": v}
                 params_list.append(temp_dict)
     except Exception as e:
-        logger.info('Got exception {}'.format(e))
-
+        print('Got exception {}'.format(e))
 
     try:
-        response = s3_client.create_bucket(Bucket=s3bucket_name, CreateBucketConfiguration={'LocationConstraint': aws_region})
+        s3_client.create_bucket(Bucket=s3bucket_name,
+                                CreateBucketConfiguration={'LocationConstraint': aws_region})
         print('Created S3 Bucket {}'.format(s3bucket_name))
     except Exception as e:
-        logger.info('Got exception {}'.format(e))
-
+        print('Got exception trying to create S3 bucket {}'.format(e))
 
     for dir in dirs:
         upload_files(s3bucket_name, dir, aws_region)

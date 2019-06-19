@@ -1,11 +1,8 @@
 import argparse
 import json
 import logging
-import os
 import sys
 import time
-import uuid
-from urllib.request import urlopen
 
 import boto3
 from botocore.exceptions import ClientError
@@ -18,6 +15,8 @@ Region = ''
 def delete_stack(stack_name, Region, ACCESS_KEY, SECRET_KEY):
     """
 
+    Sends a delete stack request and monitors the progress of the deletion process by calling describe_stacks
+
     :param stack_name:
     :param Region:
     :return:
@@ -27,57 +26,67 @@ def delete_stack(stack_name, Region, ACCESS_KEY, SECRET_KEY):
                              aws_access_key_id=ACCESS_KEY,
                              aws_secret_access_key=SECRET_KEY)
 
+    #
+    # Need to use the StackId when calling describe stacks as DELETE_COMPLETE is never returned using stack names
+    #
     try:
         stack_data = cf_client.describe_stacks(StackName=stack_name)
         stack_id = stack_data['Stacks'][0]['StackId']
         response = cf_client.delete_stack(StackName=stack_id)
+
+        if 'ResponseMetadata' in response and response['ResponseMetadata']['HTTPStatusCode'] < 300:
+            logger.info("Got response: {0}".format(response))
+
+            while True:
+                try:
+                    stack_data = cf_client.describe_stacks(StackName=stack_id)
+
+                    if stack_data['Stacks'][0]['StackStatus'] == 'ROLLBACK_IN_PROGRESS':
+                        print('Stack is rolling back - check the event logs')
+                        time.sleep(30)
+                        continue
+                    elif stack_data['Stacks'][0]['StackStatus'] == 'DELETE_IN_PROGRESS':
+                        print('Stack still deleting')
+                        time.sleep(30)
+                        continue
+                    elif stack_data['Stacks'][0]['StackStatus'] == 'DELETE_FAILED':
+                        print('Stack has failed to delete check your console')
+                        return False
+                    elif stack_data['Stacks'][0]['StackStatus'] == 'ROLLBACK_FAILED':
+                        print('Stack has failed to rollback check your console')
+                        return False
+                    elif stack_data['Stacks'][0]['StackStatus'] == 'DELETE_COMPLETE':
+                        print('Stack has been deleted')
+                        return True
+                    else:
+                        print('Please check the stack deletion status in your AWS console')
+                        return False
+                except ClientError:
+                    print('Unable to find stack {}'.format(stack_name))
+                    return False
+                except Exception as e:
+                    logger.info('Got exception {}'.format(e))
+                    return False
+
+        else:
+            logger.info("There was an Unexpected error. response: {0}".format(response))
+            return False
+
     except ClientError as error:
-        print('Error: {}'.format(error.response['Error']['Message']))
+        print('Got exception {}'.format(error))
     except Exception as e:
-        logger.info('Got exception {}'.format(e))
-
-
-    if 'ResponseMetadata' in response and response['ResponseMetadata']['HTTPStatusCode'] < 300:
-        logger.info("Got response: {0}".format(response))
-
-        while True:
-            try:
-                stack_data = cf_client.describe_stacks(StackName=stack_id)
-
-                if stack_data['Stacks'][0]['StackStatus'] == 'ROLLBACK_IN_PROGRESS':
-                    print('Stack is rolling back - check the event logs')
-                    time.sleep(30)
-                    continue
-                elif stack_data['Stacks'][0]['StackStatus'] == 'DELETE_IN_PROGRESS':
-                    print('Stack still deleting')
-                    time.sleep(30)
-                    continue
-                elif stack_data['Stacks'][0]['StackStatus'] == 'DELETE_FAILED':
-                    print('Stack has failed to delete check your console')
-                    return False
-                elif stack_data['Stacks'][0]['StackStatus'] == 'ROLLBACK_FAILED':
-                    print('Stack has failed to rollback check your console')
-                    return False
-                elif stack_data['Stacks'][0]['StackStatus'] == 'DELETE_COMPLETE':
-                    print('Stack has been deleted')
-                    return True
-                else:
-                    print('Please check the stack deletion status in your AWS console')
-                    return False
-            except ClientError as error:
-                print('Unable to find stack {}'.format(stack_name))
-                return False
-            except Exception as e:
-                logger.info('Got exception {}'.format(e))
-                return False
-        return True
-
-    else:
-        logger.info("There was an Unexpected error. response: {0}".format(response))
-        return False
+        print('Got exception {}'.format(e))
 
 
 def delete_bucket(s3bucket_name, Region, ACCESS_KEY, SECRET_KEY):
+    """
+    Deletes the S3 bucket used for stack deployment and firewall bootstrap
+    :param s3bucket_name:
+    :param Region:
+    :param ACCESS_KEY:
+    :param SECRET_KEY:
+    :return:
+    """
     s3 = boto3.resource('s3',
                         region_name=Region,
                         aws_access_key_id=ACCESS_KEY,
@@ -95,7 +104,7 @@ def delete_bucket(s3bucket_name, Region, ACCESS_KEY, SECRET_KEY):
 
 def main():
     """
-
+    First deletes the cloudformation stack and then deletes the S3 bucket used in the deployment
     :return:
     """
     global Region
@@ -120,14 +129,12 @@ def main():
             stack_name = config_dict['stack_name']
             s3bucket_name = config_dict['s3bucket_name']
     except FileNotFoundError:
-        logger.infor('File no longer exists')
+        print('File no longer exists')
     except Exception as e:
-        logger.infor('Got exception {}'.format(e))
+        print('Got exception {}'.format(e))
         sys.exit("Could not find deployment config file 'deployment_data.json'")
 
     print('Deleting Stack {}'.format(stack_name))
-
-
 
     if delete_stack(stack_name, aws_region, ACCESS_KEY, SECRET_KEY):
         print('Deleted Stack {}'.format(stack_name))
