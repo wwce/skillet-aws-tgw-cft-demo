@@ -1814,9 +1814,27 @@ Outputs:
   NATInstancePublicIp:
     Value: !GetAtt 'natInstance.PublicIp'
     Description: NAT Instance Public IP
+  Fw1InstanceId:
+    Value: !Ref 'FW1Instance'
+    Description: Firewall1 Instance id
+  FW1TrustNetworkInterface:
+    Value: !Ref 'FW1TrustNetworkInterface'
+    Description: Firewall 1 Trust Interface
+  Fw2InstanceId:
+    Value: !Ref 'FW2Instance'
+    Description: Firewall2 Instance id
+  FW2TrustNetworkInterface:
+    Value: !Ref 'FW2TrustNetworkInterface'
+    Description: Firewall 2 Trust Interface
+  fromTGWRouteTableId:
+    Value: !Ref 'fromTGWRouteTable'
+    Description: fromTGWRouteTable id
   Fw1MgmtIP:
     Value: !GetAtt 'FW1ManagementNetworkInterface.PrimaryPrivateIpAddress'
     Description: Firewall 1 Untrust Interface Public IP
   Fw2MgmtIP:
     Value: !GetAtt 'FW2ManagementNetworkInterface.PrimaryPrivateIpAddress'
     Description: Firewall 2 Untrust Interface Public IP
+  LambdaFunctionName:
+    Value: !GetAtt [TransitGatewayRouteMonitorLambda, Arn]
+    Description: Lambda function name

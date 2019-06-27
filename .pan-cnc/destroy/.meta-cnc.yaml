@@ -1,6 +1,6 @@
 name: aws_tgw_direct_exp_teardown
 # label used for menu selection
-label: AWS Transit Gateway Firewalls Step 2 Teardown
+label: AWS Transit Gateway Firewalls Step 4 Teardown
 
 description: >
   This skillet will destroy the cloudformation stack.
