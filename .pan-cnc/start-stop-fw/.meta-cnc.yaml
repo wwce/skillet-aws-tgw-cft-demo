@@ -47,6 +47,14 @@ variables:
         value: "yes"
       - key: "No"
         value: "no"
+  - name: preempt
+    description: Preempt (Failback when device is available)
+    type_hint: dropdown
+    dd_list:
+      - key: "Yes"
+        value: "yes"
+      - key: "No"
+        value: "no"
   - name: aws_access_key
     description: AWS Access Key
     default: abc123
