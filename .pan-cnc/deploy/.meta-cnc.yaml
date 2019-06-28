@@ -1,6 +1,6 @@
 name: aws_tgw_direct_exp
 # label used for menu selection
-label: AWS Transit Gateway Firewalls Step 1 Infrastructure Deployment Build
+label: AWS Transit Gateway Firewalls Step 3 Test Failover
 
 description: >
   This skillet deploys the VMSeries Firewalls in a VPC with a direct attachment to a transit gateway.
