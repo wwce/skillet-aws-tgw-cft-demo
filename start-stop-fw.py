@@ -1,6 +1,6 @@
+import argparse
 import json
 import logging
-import argparse
 import time
 
 import boto3
@@ -11,9 +11,7 @@ logger.setLevel(logging.INFO)
 aws_region = ''
 ACCESS_KEY = ''
 SECRET_KEY = ''
-ec2_client = boto3.client('ec2')
-cf_client = boto3.client('cloudformation')
-lambda_client = boto3.client('lambda')
+
 
 #
 # Initial constants
@@ -24,16 +22,25 @@ TEMPLATEFILE = 'template.json'
 
 
 def stop_firewall(fw_instance_id):
+    ec2_client = boto3.client('ec2', region_name=aws_region,
+                             aws_access_key_id=ACCESS_KEY,
+                             aws_secret_access_key=SECRET_KEY)
     result = ec2_client.stop_instances(InstanceIds=[fw_instance_id])
     return
 
 
 def start_firewall(fw_instance_id):
+    ec2_client = boto3.client('ec2', region_name=aws_region,
+                             aws_access_key_id=ACCESS_KEY,
+                             aws_secret_access_key=SECRET_KEY)
     result = ec2_client.start_instances(InstanceIds=[fw_instance_id])
     return
 
 
 def update_env_variable(function, key, value):
+    lambda_client = boto3.client('lambda', region_name=aws_region,
+                              aws_access_key_id=ACCESS_KEY,
+                              aws_secret_access_key=SECRET_KEY)
     try:
         function_data = lambda_client.get_function_configuration(FunctionName=function)
         env_variables = function_data['Environment']['Variables']
@@ -57,7 +64,7 @@ def main():
     global ACCESS_KEY
     global SECRET_KEY
     global aws_region
-    global ec2_client
+
 
     parser = argparse.ArgumentParser(description='Get Parameters')
     parser.add_argument('-p', '--preempt', help='Preempt', default='yes')
@@ -93,8 +100,13 @@ def main():
         print('Could not open file {} to find stack info'.format(DEPLOYMENTDATA))
 
     if stack:
-        cf_client = boto3.client('cloudformation', region_name=aws_region)
-        ec2_client = boto3.client('ec2', region_name=aws_region)
+        cf_client = boto3.client('cloudformation', region_name=aws_region,
+                             aws_access_key_id=ACCESS_KEY,
+                             aws_secret_access_key=SECRET_KEY)
+        ec2_client = boto3.client('ec2', region_name=aws_region,
+                             aws_access_key_id=ACCESS_KEY,
+                             aws_secret_access_key=SECRET_KEY)
+        
         r = cf_client.describe_stacks(StackName=stack)
         stack, = r['Stacks']
         outputs = stack['Outputs']
@@ -129,7 +141,7 @@ def main():
 
     # Perform Firewall Action
     print(print_header)
-    print('{:^38}\n'.format('Modifying firewall ' + firewall_to_change ))
+    print('{:^38}\n'.format('Modifying firewall ' + firewall_to_change))
     print('{:^38}\n'.format('Action ' + fw_action))
     print(print_header)
 
@@ -138,11 +150,11 @@ def main():
     else:
         firewall_id = fw1_instance_id
     fw_data = ec2_client.describe_instances(
-            InstanceIds=[firewall_id]
-        )
+        InstanceIds=[firewall_id]
+    )
     fwstate = fw_data['Reservations'][0]['Instances'][0]['State']['Name']
     if fw_action == 'stop' and fwstate == 'running':
-        stop_firewall (firewall_id)
+        stop_firewall(firewall_id)
         time.sleep(30)
     elif fwstate == 'stopped' and fw_action == 'start':
         start_firewall(firewall_id)
@@ -152,14 +164,7 @@ def main():
         print(print_header)
         print('{:^38}\n'.format(firewall_to_change + ' is in a ' + fwstate + ' state. Nothing to do'))
 
-
-
-
-
     # Get new route table
-
-
-
 
 
 if __name__ == '__main__':

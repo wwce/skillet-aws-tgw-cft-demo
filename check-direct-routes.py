@@ -1,8 +1,8 @@
-from __future__ import division, print_function, unicode_literals
+
 
 import json
 import re
-
+import argparse
 import boto3
 
 #
@@ -14,6 +14,13 @@ TEMPLATEFILE = 'template.json'
 
 
 def main():
+    parser = argparse.ArgumentParser(description='Get Parameters')
+    parser.add_argument('-k', '--aws_access_key', help='AWS Key', required=True)
+    parser.add_argument('-s', '--aws_secret_key', help='AWS Secret', required=True)
+
+    args = parser.parse_args()
+    ACCESS_KEY = args.aws_access_key
+    SECRET_KEY = args.aws_secret_key
 
     try:
         with open(DEPLOYMENTDATA, 'r') as data:
@@ -24,9 +31,15 @@ def main():
     except FileNotFoundError:
         print('File no longer exists')
 
-    cf = boto3.client('cloudformation', region_name=aws_region)
-    ec2_client = boto3.client('ec2', region_name=aws_region)
-    r = cf.describe_stacks(StackName=stack_name)
+    cf = boto3.client('cloudformation', region_name=aws_region,
+                             aws_access_key_id=ACCESS_KEY,
+                             aws_secret_access_key=SECRET_KEY)
+    ec2_client = boto3.client('ec2', region_name=aws_region,
+                             aws_access_key_id=ACCESS_KEY,
+                             aws_secret_access_key=SECRET_KEY)
+    r = cf.describe_stacks(StackName=stack_name,region_name=aws_region,
+                             aws_access_key_id=ACCESS_KEY,
+                             aws_secret_access_key=SECRET_KEY)
 
     stack, = r['Stacks']
     outputs = stack['Outputs']
