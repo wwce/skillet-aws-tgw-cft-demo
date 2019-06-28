@@ -342,7 +342,7 @@ def main():
     config_dict.update({'route_table_id' : out['fromTGWRouteTableId']})
 
 
-    config_dict.update = ({
+    config_dict.update({
         's3bucket_name': s3bucket_name,
         'stack_name': stack_name,
         'aws_region' : aws_region
