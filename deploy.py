@@ -242,6 +242,10 @@ def main():
     global SECRET_KEY
     global aws_region
 
+    fwints = {}
+    out = {}
+    config_dict = {}
+
     parser = argparse.ArgumentParser(description='Get Parameters')
     parser.add_argument('-r', '--aws_region', help='Select aws_region', default='us-east-1')
     parser.add_argument('-k', '--aws_access_key', help='AWS Key', required=True)
@@ -271,15 +275,7 @@ def main():
     stack_name = 'panw-' + prefix + 'tgw-direct'
     dirs = ['bootstrap']
 
-    config_dict = {
-        's3bucket_name': s3bucket_name,
-        'stack_name': stack_name,
-        'aws_region' :aws_region
-    }
-    #
-    #
-    with open(DEPLOYMENTDATA, 'w+') as datafile:
-        datafile.write(json.dumps(config_dict))
+
 
     # Create zones from region in this case Zone a and Zone b
     # Required string is
@@ -328,6 +324,34 @@ def main():
         load_template(template_url, params_list, stack_name)
 
     monitor_stack(stack_name, aws_region)
+
+    r = cf_client.describe_stacks(StackName=stack_name)
+
+    stack, = r['Stacks']
+    outputs = stack['Outputs']
+
+    for o in outputs:
+        key = o['OutputKey']
+        out[key] = o['OutputValue']
+        config_dict.update({o['OutputKey']: o['OutputValue']})
+        if o['OutputKey'] == 'FW1TrustNetworkInterface' or o['OutputKey'] == 'FW2TrustNetworkInterface':
+            intkey = o['OutputValue']
+            fwints[intkey] =o['Description']
+            config_dict.update({o['OutputValue']:o['Description']})
+
+    config_dict.update({'route_table_id' : out['fromTGWRouteTableId']})
+
+
+    config_dict.update = ({
+        's3bucket_name': s3bucket_name,
+        'stack_name': stack_name,
+        'aws_region' : aws_region
+    })
+
+    with open(DEPLOYMENTDATA, 'w+') as datafile:
+        datafile.write(json.dumps(config_dict))
+
+
 
 
 if __name__ == '__main__':
