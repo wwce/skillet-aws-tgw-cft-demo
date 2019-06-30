@@ -29,8 +29,12 @@ labels:
 variables:
   - name: firewall
     description: Select Firewall
-    default: Firewall1
-    type_hint: text
+    dd_list:
+      - key: "Firewall 2"
+        value: "Firewall2"
+      - key: "Firewall 1"
+        value: "Firewall1"
+    type_hint: dropdown
   - name: action
     description: Start or Stop Firewall
     type_hint: dropdown
