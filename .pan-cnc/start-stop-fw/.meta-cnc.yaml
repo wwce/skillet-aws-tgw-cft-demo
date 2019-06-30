@@ -33,12 +33,12 @@ variables:
     type_hint: text
   - name: action
     description: Start or Stop Firewall
+    type_hint: text
     dd_list:
       - key: "Start"
         value: "start"
       - key: "Stop"
         value: "stop"
-    type_hint: text
   - name: split_routes
     description: AWS Region
     type_hint: dropdown
