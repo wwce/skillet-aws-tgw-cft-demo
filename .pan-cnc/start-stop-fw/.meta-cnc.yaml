@@ -1,6 +1,6 @@
 name: aws_tgw_start_stop_fw
 # label used for menu selection
-label: AWS Transit Gateway Route Failover Demo
+label: AWS Transit Gateway Step 3 Route Failover Demo
 
 description: >
 
