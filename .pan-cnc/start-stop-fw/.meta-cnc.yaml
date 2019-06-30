@@ -40,7 +40,7 @@ variables:
       - key: "Stop"
         value: "stop"
   - name: split_routes
-    description: AWS Region
+    description: Split East/West vs Oubound connections
     type_hint: dropdown
     dd_list:
       - key: "Yes"

@@ -1,10 +1,9 @@
-from __future__ import division, print_function, unicode_literals
+
 
 import json
 import re
-
-import boto3
 import argparse
+import boto3
 
 #
 # Initial constants
@@ -38,7 +37,9 @@ def main():
     ec2_client = boto3.client('ec2', region_name=aws_region,
                              aws_access_key_id=ACCESS_KEY,
                              aws_secret_access_key=SECRET_KEY)
-    r = cf.describe_stacks(StackName=stack_name)
+    r = cf.describe_stacks(StackName=stack_name,region_name=aws_region,
+                             aws_access_key_id=ACCESS_KEY,
+                             aws_secret_access_key=SECRET_KEY)
 
     stack, = r['Stacks']
     outputs = stack['Outputs']

@@ -13,7 +13,6 @@ ACCESS_KEY = ''
 SECRET_KEY = ''
 
 
-
 #
 # Initial constants
 #
@@ -23,19 +22,25 @@ TEMPLATEFILE = 'template.json'
 
 
 def stop_firewall(fw_instance_id):
-
+    ec2_client = boto3.client('ec2', region_name=aws_region,
+                             aws_access_key_id=ACCESS_KEY,
+                             aws_secret_access_key=SECRET_KEY)
     result = ec2_client.stop_instances(InstanceIds=[fw_instance_id])
     return
 
 
 def start_firewall(fw_instance_id):
-
+    ec2_client = boto3.client('ec2', region_name=aws_region,
+                             aws_access_key_id=ACCESS_KEY,
+                             aws_secret_access_key=SECRET_KEY)
     result = ec2_client.start_instances(InstanceIds=[fw_instance_id])
     return
 
 
 def update_env_variable(function, key, value):
-
+    lambda_client = boto3.client('lambda', region_name=aws_region,
+                              aws_access_key_id=ACCESS_KEY,
+                              aws_secret_access_key=SECRET_KEY)
     try:
         function_data = lambda_client.get_function_configuration(FunctionName=function)
         env_variables = function_data['Environment']['Variables']
@@ -59,8 +64,7 @@ def main():
     global ACCESS_KEY
     global SECRET_KEY
     global aws_region
-    global ec2_client
-    global lambda_client
+
 
     parser = argparse.ArgumentParser(description='Get Parameters')
     parser.add_argument('-p', '--preempt', help='Preempt', default='yes')
@@ -102,9 +106,7 @@ def main():
         ec2_client = boto3.client('ec2', region_name=aws_region,
                              aws_access_key_id=ACCESS_KEY,
                              aws_secret_access_key=SECRET_KEY)
-        lambda_client = boto3.client('lambda', region_name=aws_region,
-                              aws_access_key_id=ACCESS_KEY,
-                              aws_secret_access_key=SECRET_KEY)
+        
         r = cf_client.describe_stacks(StackName=stack)
         stack, = r['Stacks']
         outputs = stack['Outputs']
