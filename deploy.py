@@ -308,8 +308,14 @@ def main():
         print('Got exception {}'.format(e))
 
     try:
-        s3_client.create_bucket(Bucket=s3bucket_name,
-                                CreateBucketConfiguration={'LocationConstraint': aws_region})
+        if  aws_region == 'us-east-1':
+            s3_client.create_bucket(
+                Bucket=s3bucket_name
+            )
+        else:
+            s3_client.create_bucket(Bucket=s3bucket_name,
+                                    CreateBucketConfiguration={'LocationConstraint': aws_region})
+
         print('Created S3 Bucket {}'.format(s3bucket_name))
     except Exception as e:
         print('Got exception trying to create S3 bucket {}'.format(e))
