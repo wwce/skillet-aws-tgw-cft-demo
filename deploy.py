@@ -271,7 +271,13 @@ def main():
     params_list = []
     prefix = generate_random_string()
     s3bucket_name = aws_region + '-' + prefix + '-tgw-direct'
-    template_url = 'https://' + s3bucket_name + '.s3-' + aws_region + '.amazonaws.com/' + TEMPLATEFILE
+    #
+    # In us-east-1 url does not have s3-{aws_region}.amazonaws.com but simply s3.amazonaws.com
+    #
+    if aws_region == 'us-east-1':
+        template_url = 'https://' + s3bucket_name + '.s3.amazonaws.com/' + TEMPLATEFILE
+    else:
+        template_url = 'https://' + s3bucket_name + '.s3-' + aws_region + '.amazonaws.com/' + TEMPLATEFILE
     stack_name = 'panw-' + prefix + 'tgw-direct'
     dirs = ['bootstrap']
 
