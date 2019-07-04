@@ -110,10 +110,9 @@ def main():
     global Region
     """
     Input arguments
-    Mandatory -r Region 'eu-west-1' | 'us-east-1' ......
+    
     """
     parser = argparse.ArgumentParser(description='Get Parameters')
-    parser.add_argument('-r', '--aws_region', help='Select aws_region', default='us-east-1')
     parser.add_argument('-k', '--aws_access_key', help='AWS Key', required=True)
     parser.add_argument('-s', '--aws_secret_key', help='AWS Secret', required=True)
 
@@ -121,11 +120,13 @@ def main():
 
     ACCESS_KEY = args.aws_access_key
     SECRET_KEY = args.aws_secret_key
-    aws_region = args.aws_region
+
 
     try:
         with open('deployment_data.json', 'r') as data:
+
             config_dict = json.load(data)
+            aws_region = config_dict['aws_region']
             stack_name = config_dict['stack_name']
             s3bucket_name = config_dict['s3bucket_name']
     except FileNotFoundError:

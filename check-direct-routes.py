@@ -37,9 +37,7 @@ def main():
     ec2_client = boto3.client('ec2', region_name=aws_region,
                              aws_access_key_id=ACCESS_KEY,
                              aws_secret_access_key=SECRET_KEY)
-    r = cf.describe_stacks(StackName=stack_name,region_name=aws_region,
-                             aws_access_key_id=ACCESS_KEY,
-                             aws_secret_access_key=SECRET_KEY)
+    r = cf.describe_stacks(StackName=stack_name)
 
     stack, = r['Stacks']
     outputs = stack['Outputs']

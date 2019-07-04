@@ -5,6 +5,7 @@ import time
 
 import boto3
 
+
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
@@ -19,6 +20,8 @@ SECRET_KEY = ''
 DEPLOYMENTDATA = './deployment_data.json'
 PARAMSFILE = './parameters.json'
 TEMPLATEFILE = 'template.json'
+
+
 
 
 def stop_firewall(fw_instance_id):
@@ -95,6 +98,8 @@ def main():
             stack_data = json.load(data)
             stack = stack_data['stack_name']
             aws_region = stack_data['aws_region']
+            route_table_id =  stack_data['fromTGWRouteTableId']
+
 
     except Exception as e:
         print('Could not open file {} to find stack info'.format(DEPLOYMENTDATA))
@@ -137,13 +142,16 @@ def main():
     print(print_header)
     print('{:^38s}'.format('Setting Environment Variables'))
     update_env_variable(lambda_function, 'splitroutes', split_routes)
+    print('{:^38s}'.format('Setting splitroutes variable to ' + split_routes))
     update_env_variable(lambda_function, 'preempt', preempt)
+    print('{:^38s}'.format('Setting preempt variable to ' + preempt))
 
     # Perform Firewall Action
     print(print_header)
-    print('{:^38}\n'.format('Modifying firewall ' + firewall_to_change))
+    print('{:^38}\n'.format('Checking start/stop action for ' + firewall_to_change))
     print('{:^38}\n'.format('Action ' + fw_action))
     print(print_header)
+
 
     if firewall_to_change == 'Firewall2':
         firewall_id = fw2_instance_id
@@ -155,14 +163,20 @@ def main():
     fwstate = fw_data['Reservations'][0]['Instances'][0]['State']['Name']
     if fw_action == 'stop' and fwstate == 'running':
         stop_firewall(firewall_id)
+        print('{:^38}\n'.format('Sending Command "stop" to firewall'))
+        print('{:^38}\n'.format('Check the route table after the action completes'))
+        print(print_header)
         time.sleep(30)
     elif fwstate == 'stopped' and fw_action == 'start':
         start_firewall(firewall_id)
-        time.sleep(300)
+        print('{:^38}\n'.format('Sending Command "start" to firewall'))
+        print('{:^38}\n'.format('If preempt is set to "yes" \nthe route table will be modified'))
+        print('{:^38}\n'.format('Check the route table in approximately 10 minutes'))
+        print(print_header)
     else:
-
         print(print_header)
         print('{:^38}\n'.format(firewall_to_change + ' is in a ' + fwstate + ' state. Nothing to do'))
+        print(print_header)
 
     # Get new route table
 

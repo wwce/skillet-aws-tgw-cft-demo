@@ -1,10 +1,10 @@
 name: aws_tgw_start_stop_fw
 # label used for menu selection
-label: AWS Transit Gateway Step 3 Route Failover Demo
+label: AWS Transit Gateway Firewalls Step 3 Route Failover Demo
 
 description: >
 
-  A lambda function monitors the health of the firewalls will failover connections to the standby firewall.
+  A lambda function monitors the health of the firewalls and will failover connections to the standby firewall.
   Various configuration options are available to modify the behaviour of the failover script.
 
   1) Splitroutes yes enables Internet traffic via primary firewall (FW1) with East/West by the secondary (FW2)
@@ -29,8 +29,12 @@ labels:
 variables:
   - name: firewall
     description: Select Firewall
-    default: Firewall1
-    type_hint: text
+    dd_list:
+      - key: "Firewall 2"
+        value: "Firewall2"
+      - key: "Firewall 1"
+        value: "Firewall1"
+    type_hint: dropdown
   - name: action
     description: Start or Stop Firewall
     type_hint: dropdown

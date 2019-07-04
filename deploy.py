@@ -271,7 +271,13 @@ def main():
     params_list = []
     prefix = generate_random_string()
     s3bucket_name = aws_region + '-' + prefix + '-tgw-direct'
-    template_url = 'https://' + s3bucket_name + '.s3-' + aws_region + '.amazonaws.com/' + TEMPLATEFILE
+    #
+    # In us-east-1 url does not have s3-{aws_region}.amazonaws.com but simply s3.amazonaws.com
+    #
+    if aws_region == 'us-east-1':
+        template_url = 'https://' + s3bucket_name + '.s3.amazonaws.com/' + TEMPLATEFILE
+    else:
+        template_url = 'https://' + s3bucket_name + '.s3-' + aws_region + '.amazonaws.com/' + TEMPLATEFILE
     stack_name = 'panw-' + prefix + 'tgw-direct'
     dirs = ['bootstrap']
 
@@ -308,8 +314,14 @@ def main():
         print('Got exception {}'.format(e))
 
     try:
-        s3_client.create_bucket(Bucket=s3bucket_name,
-                                CreateBucketConfiguration={'LocationConstraint': aws_region})
+        if  aws_region == 'us-east-1':
+            s3_client.create_bucket(
+                Bucket=s3bucket_name
+            )
+        else:
+            s3_client.create_bucket(Bucket=s3bucket_name,
+                                    CreateBucketConfiguration={'LocationConstraint': aws_region})
+
         print('Created S3 Bucket {}'.format(s3bucket_name))
     except Exception as e:
         print('Got exception trying to create S3 bucket {}'.format(e))
