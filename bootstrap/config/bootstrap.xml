@@ -10105,6 +10105,8 @@ This appid covers the traffic between public VMware server and VUM or UMDS, but 
                 <lldp>
                   <enable>no</enable>
                 </lldp>
+                <interface-management-profile>mgt-profile</interface-management-profile>
+
               </layer3>
             </entry>
             <entry name="ethernet1/2">
@@ -10143,6 +10145,9 @@ This appid covers the traffic between public VMware server and VUM or UMDS, but 
               <https>yes</https>
               <ssh>yes</ssh>
               <ping>yes</ping>
+            </entry>
+            <entry name="mgt-profile">
+              <https>yes</https>
             </entry>
           </interface-management-profile>
         </profiles>
