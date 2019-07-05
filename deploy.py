@@ -2,13 +2,18 @@ import argparse
 import json
 import logging
 import os
-import sys
 import time
 import uuid
+import xml.etree.ElementTree as ET
+import urllib3
+import sys
 from urllib.request import urlopen
 
+
 import boto3
+import requests
 from botocore.exceptions import ClientError
+urllib3.disable_warnings()
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -23,6 +28,147 @@ SECRET_KEY = ''
 DEPLOYMENTDATA = 'deployment_data.json'
 PARAMSFILE = './parameters.json'
 TEMPLATEFILE = 'template.json'
+
+
+def send_request(call):
+    """
+    Handles sending requests to API
+    :param call: url
+    :return: Retruns result of call. Will return response for codes between 200 and 400.
+             If 200 response code is required check value in response
+    """
+    headers = {'Accept-Encoding': 'None',
+               'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36'}
+
+    try:
+        r = requests.get(call, headers=headers, verify=False, timeout=5)
+        r.raise_for_status()
+    except requests.exceptions.HTTPError as errh:
+        '''
+        Firewall may return 5xx error when rebooting.  Need to handle a 5xx response 
+        '''
+        logger.debug("DeployRequestException Http Error:")
+        raise FWNotUpException("Http Error:")
+    except requests.exceptions.ConnectionError as errc:
+        logger.debug("DeployRequestException Connection Error:")
+        raise FWNotUpException("Connection Error")
+    except requests.exceptions.Timeout as errt:
+        logger.debug("DeployRequestException Timeout Error:")
+        raise FWNotUpException("Timeout Error")
+    except requests.exceptions.RequestException as err:
+        logger.debug("DeployRequestException RequestException Error:")
+        raise FWNotUpException("Request Error")
+    else:
+        return r
+
+
+def check_firewall(fwMgtIP, api_key):
+    print('{:^80}'.format('****** Checking firewall at ' + fwMgtIP + ' ******' ))
+    while True:
+        err = getFirewallStatus(fwMgtIP, api_key)
+        if err == 'cmd_error':
+            logger.info("Command error from fw ")
+
+        elif err == 'no':
+            # logger.info("FW is not up...yet")
+            print('{:^80}'.format('****** FW is not up yet checking in 60 secs ******'))
+            time.sleep(60)
+            continue
+
+        elif err == 'almost':
+            print('{:^80}'.format('MGT up waiting for dataplane'))
+            time.sleep(20)
+            continue
+
+        elif err == 'yes':
+            print('{:^80}'.format('****** FW is up ******'))
+            break
+    return 'yes'
+
+
+def getFirewallStatus(fwIP, api_key):
+    fwip = fwIP
+
+    """
+    Gets the firewall status by sending the API request show chassis status.
+    :param fwMgtIP:  IP Address of firewall interface to be probed
+    :param api_key:  Panos API key
+    """
+    global gcontext
+
+    url = "https://%s/api/?type=op&cmd=<show><chassis-ready></chassis-ready></show>&key=%s" % (fwip, api_key)
+    # Send command to fw and see if it times out or we get a response
+    logger.info("Sending command 'show chassis status' to firewall")
+    try:
+        response = requests.get(url, verify=False, timeout=10)
+        response.raise_for_status()
+    except requests.exceptions.Timeout as fwdownerr:
+        logger.debug("No response from FW. So maybe not up!")
+        return 'no'
+        # sleep and check again?
+    except requests.exceptions.HTTPError as fwstartgerr:
+        '''
+        Firewall may return 5xx error when rebooting.  Need to handle a 5xx response
+        raise_for_status() throws HTTPError for error responses
+        '''
+        logger.infor("Http Error: {}: ".format(fwstartgerr))
+        return 'cmd_error'
+    except requests.exceptions.RequestException as err:
+        logger.debug("Got RequestException response from FW. So maybe not up!")
+        return 'cmd_error'
+    else:
+        logger.debug("Got response to 'show chassis status' {}".format(response))
+
+        resp_header = ET.fromstring(response.content)
+        logger.debug('Response header is {}'.format(resp_header))
+
+        if resp_header.tag != 'response':
+            logger.debug("Did not get a valid 'response' string...maybe a timeout")
+            return 'cmd_error'
+
+        if resp_header.attrib['status'] == 'error':
+            logger.debug("Got an error for the command")
+            return 'cmd_error'
+
+        if resp_header.attrib['status'] == 'success':
+            # The fw responded with a successful command execution. So is it ready?
+            for element in resp_header:
+                if element.text.rstrip() == 'yes':
+                    logger.info("FW Chassis is ready to accept configuration and connections")
+                    return 'yes'
+                else:
+                    logger.info("FW Chassis not ready, still waiting for dataplane")
+                    time.sleep(10)
+                    return 'almost'
+
+
+class FWNotUpException(Exception):
+    pass
+
+
+def getApiKey(hostname, username, password):
+    """
+    Generate the API key from username / password
+    """
+
+    call = "https://%s/api/?type=keygen&user=%s&password=%s" % (hostname, username, password)
+    api_key = ""
+    while True:
+        try:
+            # response = urllib.request.urlopen(url, data=encoded_data, context=ctx).read()
+            response = send_request(call)
+
+        except FWNotUpException as updateerr:
+            logger.info("No response from FW. Wait 30 secs before retry")
+            time.sleep(30)
+            # raise FWNotUpException("Timeout Error")
+            continue
+
+        else:
+            api_key = ET.XML(response.content)[0][0].text
+            logger.info("FW Management plane is Responding so checking if Dataplane is ready")
+            logger.debug("Response to get_api is {}".format(response))
+            return api_key
 
 
 def generate_random_string():
@@ -199,22 +345,22 @@ def monitor_stack(stack_name, aws_region):
         try:
             stack_data = cf_client.describe_stacks(StackName=stack_name)
             if stack_data['Stacks'][0]['StackStatus'] == 'ROLLBACK_IN_PROGRESS':
-                print('Stack is rolling back - check the event logs')
+                print('{:^80}'.format('Stack is rolling back - check the event logs'))
                 time.sleep(30)
                 continue
             elif stack_data['Stacks'][0]['StackStatus'] == 'DELETE_IN_PROGRESS':
-                print('Stack still deleting')
+                print('{:^80}'.format('Stack still deleting'))
                 time.sleep(30)
                 continue
             elif stack_data['Stacks'][0]['StackStatus'] == 'CREATE_IN_PROGRESS':
-                print('Stack still creating - check again in 30 secs')
+                print('{:^80}'.format('Stack still creating - check again in 30 secs'))
                 time.sleep(30)
                 continue
             elif stack_data['Stacks'][0]['StackStatus'] == 'CREATE_COMPLETE':
-                print('Stack has deployed successfully')
+                print('{:^80}'.format('****** Stack has deployed successfully ******\n'))
                 break
             elif stack_data['Stacks'][0]['StackStatus'] == 'ROLLBACK_FAILED':
-                print('Stack has failed to rollback check your console')
+                print('{:^80}'.format('Stack has failed to rollback check your console'))
                 break
         except ClientError as error:
             logger.info('Got exception {}'.format(error))
@@ -245,6 +391,7 @@ def main():
     fwints = {}
     out = {}
     config_dict = {}
+    fw_pub_ips = {}
 
     parser = argparse.ArgumentParser(description='Get Parameters')
     parser.add_argument('-r', '--aws_region', help='Select aws_region', default='us-east-1')
@@ -278,11 +425,11 @@ def main():
         template_url = 'https://' + s3bucket_name + '.s3.amazonaws.com/' + TEMPLATEFILE
     else:
         template_url = 'https://' + s3bucket_name + '.s3-' + aws_region + '.amazonaws.com/' + TEMPLATEFILE
+
     stack_name = 'panw-' + prefix + 'tgw-direct'
     dirs = ['bootstrap']
 
-
-
+    #
     # Create zones from region in this case Zone a and Zone b
     # Required string is
     # 'eu-west-1a,eu-west-1b'
@@ -334,10 +481,11 @@ def main():
     else:
         print('Deploying template')
         load_template(template_url, params_list, stack_name)
-
     monitor_stack(stack_name, aws_region)
-
-    r = cf_client.describe_stacks(StackName=stack_name)
+    try:
+        r = cf_client.describe_stacks(StackName=stack_name)
+    except Exception as e:
+        print('Error getting stack data {}'.format(e))
 
     stack, = r['Stacks']
     outputs = stack['Outputs']
@@ -348,22 +496,46 @@ def main():
         config_dict.update({o['OutputKey']: o['OutputValue']})
         if o['OutputKey'] == 'FW1TrustNetworkInterface' or o['OutputKey'] == 'FW2TrustNetworkInterface':
             intkey = o['OutputValue']
-            fwints[intkey] =o['Description']
-            config_dict.update({o['OutputValue']:o['Description']})
+            fwints[intkey] = o['Description']
+            config_dict.update({o['OutputValue']: o['Description']})
+        if o['OutputKey'] == 'Fw1PublicIP' or o['OutputKey'] == 'Fw2PublicIP':
+            fw_pub_ips.update({o['OutputKey']: o['OutputValue']})
 
-    config_dict.update({'route_table_id' : out['fromTGWRouteTableId']})
-
+    config_dict.update({'route_table_id': out['fromTGWRouteTableId']})
 
     config_dict.update({
         's3bucket_name': s3bucket_name,
         'stack_name': stack_name,
-        'aws_region' : aws_region
+        'aws_region': aws_region
     })
 
     with open(DEPLOYMENTDATA, 'w+') as datafile:
         datafile.write(json.dumps(config_dict))
+    fw1_status = ''
+    fw2_status = ''
 
+    print('{:^80}'.format('****** Waiting for firewalls to bootstrap ********\n'))
+    try:
+        with open(PARAMSFILE, 'r') as data:
+            params_dict = json.load(data)
+            api_key = params_dict.get('apikey', None)
+            if api_key:
+                # Check firewall 1
+                fw1_status = check_firewall(fw_pub_ips['Fw1PublicIP'], api_key)
+                fw2_status = check_firewall(fw_pub_ips['Fw2PublicIP'], api_key)
+                if fw1_status == 'yes' and fw2_status == 'yes':
+                    print('{:^80}'.format('****** Firewalls are ready ********'))
+                elif fw1_status == 'almost' or fw2_status == 'almost':
+                    print('Dataplane initialising -- waiting another 30 secs')
+                    time.sleep(30)
+                else:
+                    print('There was a problem -- fw1 status {} fw2 status {}'.format(fw1_status, fw2_status))
 
+            else:
+                print('Value for apikey not found')
+
+    except Exception as e:
+        print('Got error reading file {}'.format(PARAMSFILE))
 
 
 if __name__ == '__main__':
