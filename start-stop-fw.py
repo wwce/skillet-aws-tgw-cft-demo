@@ -21,7 +21,66 @@ DEPLOYMENTDATA = './deployment_data.json'
 PARAMSFILE = './parameters.json'
 TEMPLATEFILE = 'template.json'
 
+def check_route_table():
+    try:
+        with open(DEPLOYMENTDATA, 'r') as data:
+            config_dict = json.load(data)
+            stack_name = config_dict['stack_name']
+            s3bucket_name = config_dict['s3bucket_name']
+            aws_region =  config_dict['aws_region']
+    except FileNotFoundError:
+        print('File no longer exists')
 
+    cf = boto3.client('cloudformation', region_name=aws_region,
+                             aws_access_key_id=ACCESS_KEY,
+                             aws_secret_access_key=SECRET_KEY)
+    ec2_client = boto3.client('ec2', region_name=aws_region,
+                             aws_access_key_id=ACCESS_KEY,
+                             aws_secret_access_key=SECRET_KEY)
+    r = cf.describe_stacks(StackName=stack_name)
+
+    stack, = r['Stacks']
+    outputs = stack['Outputs']
+    fwints = {}
+    out = {}
+    for o in outputs:
+        key = o['OutputKey']
+        out[key] = o['OutputValue']
+        if o['OutputKey'] == 'FW1TrustNetworkInterface' or o['OutputKey'] == 'FW2TrustNetworkInterface':
+            intkey = o['OutputValue']
+            fwints[intkey] =o['Description']
+
+    route_table_id = out['fromTGWRouteTableId']
+
+    try:
+        resp_rt_table = ec2_client.describe_route_tables(RouteTableIds=[route_table_id])
+        routes =  resp_rt_table['RouteTables'][0]['Routes']
+        print('\n{:25}{:30}{:20}\n'.format('Destination Prefix', 'Next Hop', 'Description'))
+        for route in routes:
+            nh = ''
+            desc = ''
+            if 'NetworkInterfaceId' in route.keys():
+                nh = route['NetworkInterfaceId']
+                desc = fwints[nh]
+            elif 'GatewayId' in route.keys():
+                nh = route['GatewayId']
+            print('{:25}{:30}{:20}'.format(route['DestinationCidrBlock'], nh, desc))
+        print('\n')
+    except Exception as e:
+        print(e)
+
+
+def run_lambda(function_name, invocation_type = 'Event'):
+    lambda_client = boto3.client('lambda', region_name=aws_region,
+                              aws_access_key_id=ACCESS_KEY,
+                              aws_secret_access_key=SECRET_KEY)
+    response = lambda_client.invoke(
+        FunctionName=function_name,
+        InvocationType=invocation_type,
+
+    )
+    time.sleep(10)
+    return response
 
 
 def stop_firewall(fw_instance_id):
@@ -99,6 +158,7 @@ def main():
             stack = stack_data['stack_name']
             aws_region = stack_data['aws_region']
             route_table_id =  stack_data['fromTGWRouteTableId']
+            lambda_function = stack_data['LambdaFunctionName']
 
 
     except Exception as e:
@@ -136,21 +196,21 @@ def main():
 
     except Exception as e:
         print('Error {}'.format(e))
-    print_header = '\n#########################################\n'
+    # print_header = '#########################################'
 
     # Setup lambda environment variables for next run
-    print(print_header)
-    print('{:^38s}'.format('Setting Environment Variables'))
+    # print('{:^80}\n'.format(print_header))
+    print('{:^80}\n'.format('****** Setting Environment Variables ********'))
     update_env_variable(lambda_function, 'splitroutes', split_routes)
-    print('{:^38s}'.format('Setting splitroutes variable to ' + split_routes))
+    print('{:^80}\n'.format('****** Setting splitroutes variable to ' + split_routes + ' ********'))
     update_env_variable(lambda_function, 'preempt', preempt)
-    print('{:^38s}'.format('Setting preempt variable to ' + preempt))
+    print('{:^80}\n'.format('****** Setting preempt variable to ' + preempt + ' ********'))
 
     # Perform Firewall Action
-    print(print_header)
-    print('{:^38}\n'.format('Checking start/stop action for ' + firewall_to_change))
-    print('{:^38}\n'.format('Action ' + fw_action))
-    print(print_header)
+    # print('{:^80}\n'.format(print_header))
+    # print('{:^80}\n'.format('Checking start/stop action for ' + firewall_to_change))
+    # print('{:^80}\n'.format('Action ' + fw_action))
+    # print('{:^80}\n'.format(print_header))
 
 
     if firewall_to_change == 'Firewall2':
@@ -163,20 +223,28 @@ def main():
     fwstate = fw_data['Reservations'][0]['Instances'][0]['State']['Name']
     if fw_action == 'stop' and fwstate == 'running':
         stop_firewall(firewall_id)
-        print('{:^38}\n'.format('Sending Command "stop" to firewall'))
-        print('{:^38}\n'.format('Check the route table after the action completes'))
-        print(print_header)
-        time.sleep(30)
+        print('{:^80}\n'.format('****** Sending Command "stop" to firewall ********'))
+        # print('{:^80}\n'.format('Check the route table after the action completes'))
+        # print('{:^80}\n'.format(print_header))
+
     elif fwstate == 'stopped' and fw_action == 'start':
         start_firewall(firewall_id)
-        print('{:^38}\n'.format('Sending Command "start" to firewall'))
-        print('{:^38}\n'.format('If preempt is set to "yes" \nthe route table will be modified'))
-        print('{:^38}\n'.format('Check the route table in approximately 10 minutes'))
-        print(print_header)
+        print('{:^80}\n'.format('****** Sending Command "start" to firewall ********'))
+        print('{:^80}\n'.format('****** If preempt is set to "yes" the route table will be modified ********'))
+        print('{:^80}\n'.format('****** Waiting for 3 mins for firewall to start ******** ********'))
+        print
+        time.sleep(180)
     else:
-        print(print_header)
-        print('{:^38}\n'.format(firewall_to_change + ' is in a ' + fwstate + ' state. Nothing to do'))
-        print(print_header)
+        # print('{:^80}\n'.format(print_header))
+        print('{:^80}\n'.format(firewall_to_change + ' is in a ' + fwstate + ' state. Nothing to do to the firewalls'))
+        # print('{:^80}\n'.format(print_header))
+
+    print('{:^80}\n'.format('****** Route table before lambda execution ********'))
+    check_route_table()
+    print('{:^80}\n'.format('****** Running lambda function ********'))
+    print('{:^80}\n'.format('****** Route table after lambda execution ********'))
+    run_lambda(lambda_function)
+    check_route_table()
 
     # Get new route table
 
