@@ -8,12 +8,6 @@ description: >
 
   Two additional VPCs are created with two servers to demonstrate how route tables should be configured.
 
-  A lambda function monitors the health of the firewalls will failover connections to the standby firewall.
-  Various configuration options are available to modify the behaviour of the failover script.
-  1) Splitroutes no enables all traffic to a primary firewall (FW1) with backup provided by the secondary (FW2)
-  2) Splitroutes yes enables Internet traffic via primary firewall (FW1) with East/West by the secondary (FW2)
-  3) Preempt YES/NO controls the failback option once the failed device becomes available again
-
 
 # type of skillet (panos or panorama or template or terraform)
 type: python3
