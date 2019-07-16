@@ -1,6 +1,6 @@
 name: aws_tgw_start_stop_fw
 # label used for menu selection
-label: AWS Transit Gateway Firewalls Step 3 Route Failover Demo
+label: AWS Transit Gateway Firewalls Step 2 Route Failover Demo
 
 description: >
 
@@ -22,7 +22,12 @@ extends:
 
 # Labels allow grouping and type specific options and are generally only used in advanced cases
 labels:
-  collection: AWS Transit Gateway Direct Attached Firewalls
+  cft: aws
+  collection:
+    - AWS TGW
+    - Deploy
+    - Public Cloud
+    - Template
 
 # variables define the things an operator may customize in this skillet. Things like DNS servers, NTP addresses, etc
 # may be customized for each deployment. Each variable will be rendered as a form field in the panhandler application
